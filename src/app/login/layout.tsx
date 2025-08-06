@@ -1,11 +1,10 @@
 'use client'
-import FooterLogin from "@/components/Footerogin";
 import { CopyrightLogin } from "@/components/Footerogin/Copyright";
 import { HeaderLogin } from "@/components/HeaderLogin";
 import { MenuHamburguer } from "@/components/Partials/MenuHamburguer";
 import { Toaster } from "react-hot-toast";
 
-export default async function LoginLayout({
+export default function LoginLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;

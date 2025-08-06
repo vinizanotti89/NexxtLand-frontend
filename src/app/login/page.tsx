@@ -1,11 +1,9 @@
 'use client'
-import { Button } from "@/components/Buttons/Button";
 import { TextForm } from "@/components/Forms/components/TextForm";
 import { TextFormPassword } from "@/components/Forms/components/TextFormPassword";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-
 
 const registerSchema = z
   .object({
@@ -23,15 +21,18 @@ const registerSchema = z
   })
 
 type FormData = z.infer<typeof registerSchema>
-export default async function Login() {
+
+export default function Login() {
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(registerSchema) })
 
+  // A função de submit continua sendo async
   async function postForm(data: FormData) {
     console.log(data)
+    //Adicionar aqui lógica de autenticação, como uma chamada à API
   }
 
   return (
@@ -39,33 +40,36 @@ export default async function Login() {
       <div className="main_container">
         <div className="">
           <div className="flex justify-center items-center">
-
             <form onSubmit={handleSubmit(postForm)} className="relative z-40 max-w-[600px] w-full">
               <p className="text-white font-black text-3xl text-center mb-4">Faça seu login</p>
+              
               <TextForm
                 register={register}
                 errors={errors}
-                name={'Login'}
-                label={''}
+                name={'email'} 
+                label={'Email'}
               />
 
               <TextFormPassword
                 register={register}
                 errors={errors}
-                name={'Senha'}
-                label={''}
-                
+                name={'password'}
+                label={'Senha'}
               />
+              
               <a href="/">
                 <p className="mt-3 font-bold text-white">Esqueci a senha</p>
               </a>
+              
               <div className="grid grid-cols-2 mt-4 relative z-30">
                 <div className="col-span-2 md:col-span-1">
-                  <a href="/">
-                    <div className="hover:bg-brand-yellow-100 border border-brand-yellow-100 font-bold text-brand-yellow-100 hover:text-white hover:border-brand-yellow-100 transition duration-700 ease-in-out flex items-center justify-center gap-2 rounded-sm px-5 py-4">
-                      ENTRAR
-                    </div>
-                  </a>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full hover:bg-brand-yellow-100 border border-brand-yellow-100 font-bold text-brand-yellow-100 hover:text-white hover:border-brand-yellow-100 transition duration-700 ease-in-out flex items-center justify-center gap-2 rounded-sm px-5 py-4 disabled:opacity-50"
+                  >
+                    {isSubmitting ? 'ENTRANDO...' : 'ENTRAR'}
+                  </button>
                 </div>
               </div>
             </form>

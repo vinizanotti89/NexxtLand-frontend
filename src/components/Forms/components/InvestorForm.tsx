@@ -18,6 +18,7 @@ export default function InvestorForm() {
   });
 
   const [objetivos, setObjetivos] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -33,14 +34,93 @@ export default function InvestorForm() {
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const fullForm = {
-      ...form,
-      objetivosSelecionados: objetivos,
+  // Mapeamento para faixas de investimento
+  const mapFaixaInvestimento = (faixa: string): number => {
+    const mapeamento = {
+      "Até US$ 25 mil": 1,
+      "De US$ 25 mil a US$ 100 mil": 2,
+      "Acima de US$ 100 mil": 3
     };
-    console.log("Form enviado:", fullForm);
-    // Aqui você pode integrar com sua API/backend
+    return mapeamento[faixa as keyof typeof mapeamento] || 0;
+  };
+
+  // Mapeamento para objetivos (assumindo que será o primeiro selecionado)
+  const mapObjetivo = (objetivos: string[]): number => {
+    if (objetivos.length === 0) return 0;
+    
+    const mapeamento = {
+      "Renda passiva em dólar": 1,
+      "Valorização do patrimônio": 2,
+      "Diversificação internacional": 3,
+      "Emigrar futuramente": 4
+    };
+    
+    // Retorna o ID do primeiro objetivo selecionado
+    const primeiroObjetivo = objetivos[0];
+    return mapeamento[primeiroObjetivo as keyof typeof mapeamento] || 1;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validação básica
+    if (!form.nome || !form.email || !form.telefone || objetivos.length === 0) {
+      alert("Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Preparar dados seguindo o padrão do BrokerForm
+      const dadosEnvio = {
+        formType: 'investor', // Identificador para o backend
+        Nome: form.nome.trim(),
+        Email: form.email.trim(),
+        WhatsApp: form.telefone.replace(/\D/g, ''), // Remove caracteres não numéricos
+        JaInvestiu: form.investeImoveis === "Sim" ? 1 : 0,
+        IdFaixaInvestimento: mapFaixaInvestimento(form.faixaInvestimento),
+        IdObjetivoInvestidor: mapObjetivo(objetivos),
+        QuerFalarEspecialista: form.investiuExterior === "Sim, quero agendar uma conversa" ? 1 : 0
+      };
+
+      console.log('Dados sendo enviados:', dadosEnvio);
+
+      // CORREÇÃO: Alterar para a rota correta
+      const response = await fetch('/api/DataBase', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dadosEnvio)
+      });
+
+      if (response.ok) {
+        alert('Cadastro realizado com sucesso! Você receberá as oportunidades em seu email.');
+        // Reset do form
+        setForm({
+          nome: "",
+          email: "",
+          telefone: "",
+          investeImoveis: "",
+          objetivo: "",
+          investiuExterior: "",
+          faixaInvestimento: "",
+          estado: "",
+          cidade: "",
+          origem: "",
+        });
+        setObjetivos([]);
+      } else {
+        const errorData = await response.json();
+        alert(`Erro ao cadastrar: ${errorData.error || 'Erro desconhecido'}`);
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+      alert('Erro de conexão com o servidor');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -77,6 +157,7 @@ export default function InvestorForm() {
           value={form.nome}
           onChange={handleChange}
           className="mt-1 w-full border border-gray-300 rounded px-3 py-2"
+          required
         />
       </div>
 
@@ -91,6 +172,7 @@ export default function InvestorForm() {
           value={form.email}
           onChange={handleChange}
           className="mt-1 w-full border border-gray-300 rounded px-3 py-2"
+          required
         />
       </div>
 
@@ -106,6 +188,7 @@ export default function InvestorForm() {
           value={form.telefone}
           onChange={handleChange}
           className="mt-1 w-full border border-gray-300 rounded px-3 py-2"
+          required
         />
       </div>
 
@@ -254,8 +337,12 @@ export default function InvestorForm() {
 
       {/* Botão */}
       <div className="flex justify-center pt-4">
-        <Button type="submit" variant="outlinedGold">
-          Quero Receber Oportunidades em Dólar
+        <Button 
+          type="submit" 
+          variant="outlinedGold"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Enviando..." : "Quero Receber Oportunidades em Dólar"}
         </Button>
       </div>
 

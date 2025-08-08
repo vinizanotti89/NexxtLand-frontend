@@ -22,24 +22,105 @@ export default function BrokerForm() {
     setForm({ ...form, [name]: value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Função para mapear valores do form para o formato esperado pelo banco
+  const mapFormDataToAPI = (formData: typeof form) => {
+    // Mapeamento para TipoAtuacao (assumindo que é bit: 1=independente, 0=vinculado)
+    const tipoAtuacao = formData.atuacao === "Corretor(a) independente" ? 1 : 0;
+    
+    // Mapeamento para IdTipoCliente (assumindo IDs numéricos)
+    let idTipoCliente = 0;
+    switch(formData.perfilCliente) {
+      case "Investidores de alto padrão": idTipoCliente = 1; break;
+      case "Médio padrão": idTipoCliente = 2; break;
+      case "Ambos": idTipoCliente = 3; break;
+    }
+    
+    // Mapeamento para JaVendeuInternacional (bit)
+    const jaVendeuInternacional = formData.jaVendeuImovelInternacional === "Sim" ? 1 : 0;
+    
+    // Mapeamento para IdFaixaClientes50k (assumindo IDs numéricos)
+    let idFaixaClientes50k = 0;
+    switch(formData.clientesPotenciais) {
+      case "Nenhum": idFaixaClientes50k = 1; break;
+      case "De 1 a 3": idFaixaClientes50k = 2; break;
+      case "Mais de 3": idFaixaClientes50k = 3; break;
+    }
+    
+    // Mapeamento para QuerTreinamento (bit)
+    const querTreinamento = formData.desejaTreinamento === "Sim" ? 1 : 0;
+    
+    // Mapeamento para IdCNPJAtivo (assumindo IDs numéricos)
+    let idCNPJAtivo = 0;
+    switch(formData.cnpj) {
+      case "Sim": idCNPJAtivo = 1; break;
+      case "Não": idCNPJAtivo = 2; break;
+      case "Pessoa física (podemos te orientar)": idCNPJAtivo = 3; break;
+    }
+
+    return {
+      TipoAtuacao: tipoAtuacao,
+      Nome: formData.nome,
+      NomeImobiliaria: formData.nomeImobiliaria || null, // Envia null se vazio
+      WhatsApp: formData.telefone.replace(/\D/g, ''), // Remove caracteres não numéricos
+      Email: formData.email,
+      IdTipoCliente: idTipoCliente,
+      JaVendeuInternacional: jaVendeuInternacional,
+      IdFaixaClientes50k: idFaixaClientes50k,
+      QuerTreinamento: querTreinamento,
+      IdCNPJAtivo: idCNPJAtivo
+    };
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(form);
-    // Aqui você pode enviar os dados para API ou serviço de backend
+
+    try {
+      // Mapeia os dados antes de enviar
+      const mappedData = mapFormDataToAPI(form);
+      
+      const response = await fetch("/api/DataBase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(mappedData)
+      });
+
+      if (response.ok) {
+        alert("Corretor cadastrado com sucesso!");
+        setForm({
+          atuacao: "",
+          nome: "",
+          nomeImobiliaria: "",
+          telefone: "",
+          email: "",
+          perfilCliente: "",
+          jaVendeuImovelInternacional: "",
+          clientesPotenciais: "",
+          desejaTreinamento: "",
+          cnpj: ""
+        });
+      } else {
+        const errorData = await response.json();
+        alert(`Erro ao cadastrar corretor: ${errorData.error || 'Erro desconhecido'}`);
+      }
+    } catch (err) {
+      console.error("Erro na requisição:", err);
+      alert("Erro de conexão com o servidor");
+    }
   };
 
   return (
     <form
-    onSubmit={handleSubmit}
-    className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow-lg space-y-6"
-  >
-    <div className="space-y-3 text-center">
-      <h1 className="text-2xl font-bold">Lucre com a Venda em Imóveis nos EUA</h1>
-      <p className="text-base">Corretores: Ganhem até <strong>10% de Comissão</strong> com Imóveis nos EUA.</p>
-      <p className="text-base">A Nexxland conecta você às melhores oportunidades de venda para seu cliente investidor.</p>
-      <p className="text-base">Aumente seu ticket médio, diversifique sua atuação e ganhe em dólar.</p>
-      <p className="text-base font-medium">Cadastre-se para ser um parceiro Nexxland.</p>
-    </div>
+      onSubmit={handleSubmit}
+      className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow-lg space-y-6"
+    >
+      <div className="space-y-3 text-center">
+        <h1 className="text-2xl font-bold">Lucre com a Venda em Imóveis nos EUA</h1>
+        <p className="text-base">Corretores: Ganhem até <strong>10% de Comissão</strong> com Imóveis nos EUA.</p>
+        <p className="text-base">A Nexxland conecta você às melhores oportunidades de venda para seu cliente investidor.</p>
+        <p className="text-base">Aumente seu ticket médio, diversifique sua atuação e ganhe em dólar.</p>
+        <p className="text-base font-medium">Cadastre-se para ser um parceiro Nexxland.</p>
+      </div>
+      
       <h2 className="text-2xl font-semibold text-center text-gray-800">
         Cadastro de Corretor
       </h2>
@@ -84,13 +165,15 @@ export default function BrokerForm() {
           value={form.nome}
           onChange={handleChange}
           className="mt-1 w-full border border-gray-300 rounded px-3 py-2"
+          required
         />
       </div>
 
       {/* Nome da imobiliária */}
       <div>
         <label className="block font-medium mb-1">
-          2. Nome da imobiliária (se aplicável)</label>
+          2. Nome da imobiliária (se aplicável)
+        </label>
         <input
           type="text"
           name="nomeImobiliaria"
@@ -112,6 +195,7 @@ export default function BrokerForm() {
           value={form.telefone}
           onChange={handleChange}
           className="mt-1 w-full border border-gray-300 rounded px-3 py-2"
+          required
         />
       </div>
 
@@ -126,13 +210,15 @@ export default function BrokerForm() {
           value={form.email}
           onChange={handleChange}
           className="mt-1 w-full border border-gray-300 rounded px-3 py-2"
+          required
         />
       </div>
 
       {/* Atua com */}
       <div>
         <label className="block font-medium mb-1">
-          5. Você atua com:</label>
+          5. Você atua com:
+        </label>
         <div className="flex flex-col gap-2">
           <label className="flex items-center">
             <input
@@ -170,7 +256,8 @@ export default function BrokerForm() {
       {/* Já vendeu imóveis internacionais */}
       <div>
         <label className="block font-medium mb-1">
-          6. Já vendeu imóveis internacionais antes?</label>
+          6. Já vendeu imóveis internacionais antes?
+        </label>
         <div className="flex gap-4">
           <label className="flex items-center">
             <input
@@ -195,7 +282,7 @@ export default function BrokerForm() {
         </div>
       </div>
 
-      {/*Clientes com potencial */}
+      {/* Clientes com potencial */}
       <div>
         <label className="block font-medium mb-1">
           7. Quantos clientes você tem com potencial de investir acima de US$ 50 mil nos próximos 6 meses?
@@ -302,11 +389,15 @@ export default function BrokerForm() {
         </div>
       </div>
 
-     <div className="flex justify-center pt-4">
-        <Button type="submit" variant="outlinedGold">Quero Ser Parceiro Nexxland</Button>
+      <div className="flex justify-center pt-4">
+        <Button type="submit" variant="outlinedGold">
+          Quero Ser Parceiro Nexxland
+        </Button>
       </div>
 
-      <p className="text-sm text-center text-gray-600 mt-4">📩 Após o cadastro, nossa equipe entrará em contato com seu link de parceiro exclusivo e condições de comissionamento.</p>
+      <p className="text-sm text-center text-gray-600 mt-4">
+        📩 Após o cadastro, nossa equipe entrará em contato com seu link de parceiro exclusivo e condições de comissionamento.
+      </p>
     </form>
   );
 }

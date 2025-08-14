@@ -15,9 +15,13 @@ export async function POST(request) {
         // Roteamento baseado no tipo de formulário
         if (formType === 'investor') {
             return await handleInvestorForm(pool, body);
-        } else {
-            // Formulário de Corretor (padrão existente)
+        } else if (formType === 'broker') {
             return await handleBrokerForm(pool, body);
+        } else {
+            return NextResponse.json(
+                { error: "Tipo de formulário não especificado ou inválido" },
+                { status: 400 }
+            );
         }
 
     } catch (err) {
@@ -35,11 +39,17 @@ async function handleInvestorForm(pool, body) {
     const {
         Nome,
         Email,
+        Cidade,
+        UF,
         WhatsApp,
         JaInvestiu,
         IdFaixaInvestimento,
         IdObjetivoInvestidor,
-        QuerFalarEspecialista
+        IdPreferenciaImovel,
+        QuerFalarEspecialista,
+        ComoConheceu,
+        CriadoEm,
+        AtualizadoEm
     } = body;
 
     // Validação básica
@@ -50,51 +60,87 @@ async function handleInvestorForm(pool, body) {
         );
     }
 
+    // Validação de faixa de investimento obrigatória
+    if (!IdFaixaInvestimento || IdFaixaInvestimento === 0) {
+        return NextResponse.json(
+            { error: "Faixa de investimento é obrigatória" },
+            { status: 400 }
+        );
+    }
+
     // Garantir que os valores boolean sejam realmente bit (0/1)
     const jaInvestiuValue = JaInvestiu === 1 || JaInvestiu === true ? 1 : 0;
     const querFalarValue = QuerFalarEspecialista === 1 || QuerFalarEspecialista === true ? 1 : 0;
 
-    // Para MySQL, não precisamos formatar WhatsApp com padding - usar VARCHAR é mais flexível
+    // Formatação do WhatsApp
     const whatsAppFormatted = WhatsApp.toString().trim();
+
+    // Tratamento das datas - converte ISO string para Date ou usa NOW()
+    const criadoEm = CriadoEm ? new Date(CriadoEm) : null;
+    const atualizadoEm = AtualizadoEm ? new Date(AtualizadoEm) : null;
 
     console.log('Valores processados (Investidor):', {
         Nome,
         Email,
+        Cidade: Cidade || null,
+        UF: UF || null,
         WhatsApp: whatsAppFormatted,
         JaInvestiu: jaInvestiuValue,
         IdFaixaInvestimento: parseInt(IdFaixaInvestimento) || 0,
         IdObjetivoInvestidor: parseInt(IdObjetivoInvestidor) || 0,
-        QuerFalarEspecialista: querFalarValue
+        IdPreferenciaImovel: parseInt(IdPreferenciaImovel) || 0,
+        QuerFalarEspecialista: querFalarValue,
+        ComoConheceu: ComoConheceu || null,
+        CriadoEm: criadoEm,
+        AtualizadoEm: atualizadoEm
     });
 
     try {
         const [result] = await pool.execute(`
             INSERT INTO Investidor (
-                Nome, Email, WhatsApp, JaInvestiu, 
-                IdFaixaInvestimento, IdObjetivoInvestidor, QuerFalarEspecialista
+                Nome, Email, Cidade, UF, WhatsApp, JaInvestiu, 
+                IdFaixaInvestimento, IdObjetivoInvestidor, IdPreferenciaImovel,
+                QuerFalarEspecialista, ComoConheceu, CriadoEm, AtualizadoEm
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             Nome,
             Email,
+            Cidade || null,
+            UF || null,
             whatsAppFormatted,
             jaInvestiuValue,
             parseInt(IdFaixaInvestimento) || 0,
             parseInt(IdObjetivoInvestidor) || 0,
-            querFalarValue
+            parseInt(IdPreferenciaImovel) || 0,
+            querFalarValue,
+            ComoConheceu || null,
+            criadoEm || new Date(), // Usa data atual se não fornecida
+            atualizadoEm || new Date() // Usa data atual se não fornecida
         ]);
 
-        console.log('Query de investidor executada com sucesso:', result);
+        console.log('✅ Query de investidor executada com sucesso:', result);
 
         return NextResponse.json({
+            success: true,
             message: "Investidor cadastrado com sucesso!",
             insertId: result.insertId
         });
 
     } catch (err) {
-        console.error("Erro ao cadastrar investidor:", err);
+        console.error("❌ Erro ao cadastrar investidor:", err);
+        
+        // Tratamento de erros específicos
+        let errorMessage = "Erro ao cadastrar investidor: " + err.message;
+        
+        if (err.code === 'ER_DUP_ENTRY') {
+            errorMessage = "Este email já está cadastrado";
+        } else if (err.code === 'ER_BAD_FIELD_ERROR') {
+            errorMessage = "Erro nos campos enviados";
+        }
+        
         return NextResponse.json(
-            { error: "Erro ao cadastrar investidor: " + err.message },
+            { error: errorMessage },
             { status: 500 }
         );
     }
@@ -112,13 +158,15 @@ async function handleBrokerForm(pool, body) {
         JaVendeuInternacional,
         IdFaixaClientes50k,
         QuerTreinamento,
-        IdCNPJAtivo
+        IdCNPJAtivo,
+        CriadoEm,
+        AtualizadoEm
     } = body;
 
     // Validação básica
     if (!Nome || !WhatsApp || !Email) {
         return NextResponse.json(
-            { error: "Campos obrigatórios não preenchidos" },
+            { error: "Campos obrigatórios não preenchidos (Nome, Email, WhatsApp)" },
             { status: 400 }
         );
     }
@@ -128,8 +176,12 @@ async function handleBrokerForm(pool, body) {
     const jaVendeuValue = JaVendeuInternacional === 1 || JaVendeuInternacional === true ? 1 : 0;
     const querTreinamentoValue = QuerTreinamento === 1 || QuerTreinamento === true ? 1 : 0;
 
-    // Para MySQL, não precisamos do padding para CHAR(15)
+    // Formatação do WhatsApp
     const whatsAppFormatted = WhatsApp.toString().trim();
+
+    // Tratamento das datas - converte ISO string para Date ou usa NOW()
+    const criadoEm = CriadoEm ? new Date(CriadoEm) : null;
+    const atualizadoEm = AtualizadoEm ? new Date(AtualizadoEm) : null;
 
     console.log('Valores processados (Corretor):', {
         TipoAtuacao: tipoAtuacaoValue,
@@ -141,7 +193,9 @@ async function handleBrokerForm(pool, body) {
         JaVendeuInternacional: jaVendeuValue,
         IdFaixaClientes50k: parseInt(IdFaixaClientes50k) || 0,
         QuerTreinamento: querTreinamentoValue,
-        IdCNPJAtivo: parseInt(IdCNPJAtivo) || 0
+        IdCNPJAtivo: parseInt(IdCNPJAtivo) || 0,
+        CriadoEm: criadoEm,
+        AtualizadoEm: atualizadoEm
     });
 
     try {
@@ -151,7 +205,7 @@ async function handleBrokerForm(pool, body) {
                 IdTipoCliente, JaVendeuInternacional, IdFaixaClientes50k, 
                 QuerTreinamento, IdCNPJAtivo, CriadoEm, AtualizadoEm
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             tipoAtuacaoValue,
             Nome,
@@ -162,20 +216,82 @@ async function handleBrokerForm(pool, body) {
             jaVendeuValue,
             parseInt(IdFaixaClientes50k) || 0,
             querTreinamentoValue,
-            parseInt(IdCNPJAtivo) || 0
+            parseInt(IdCNPJAtivo) || 0,
+            criadoEm || new Date(), // Usa data atual se não fornecida
+            atualizadoEm || new Date() // Usa data atual se não fornecida
         ]);
 
-        console.log('Query de corretor executada com sucesso:', result);
+        console.log('✅ Query de corretor executada com sucesso:', result);
 
         return NextResponse.json({
+            success: true,
             message: "Corretor cadastrado com sucesso!",
             insertId: result.insertId
         });
 
     } catch (err) {
-        console.error("Erro ao cadastrar corretor:", err);
+        console.error("❌ Erro ao cadastrar corretor:", err);
+        
+        // Tratamento de erros específicos
+        let errorMessage = "Erro ao cadastrar corretor: " + err.message;
+        
+        if (err.code === 'ER_DUP_ENTRY') {
+            errorMessage = "Este email já está cadastrado";
+        } else if (err.code === 'ER_BAD_FIELD_ERROR') {
+            errorMessage = "Erro nos campos enviados";
+        }
+        
         return NextResponse.json(
-            { error: "Erro ao cadastrar corretor: " + err.message },
+            { error: errorMessage },
+            { status: 500 }
+        );
+    }
+}
+
+// Método GET opcional para consultar dados
+export async function GET(request) {
+    try {
+        const pool = await connectDB();
+        const { searchParams } = new URL(request.url);
+        const type = searchParams.get('type');
+        const limit = parseInt(searchParams.get('limit') || '50');
+        const offset = parseInt(searchParams.get('offset') || '0');
+
+        let query;
+        let countQuery;
+        
+        if (type === 'investidores') {
+            query = `SELECT * FROM Investidor ORDER BY CriadoEm DESC LIMIT ? OFFSET ?`;
+            countQuery = `SELECT COUNT(*) as total FROM Investidor`;
+        } else if (type === 'corretores') {
+            query = `SELECT * FROM Corretor ORDER BY CriadoEm DESC LIMIT ? OFFSET ?`;
+            countQuery = `SELECT COUNT(*) as total FROM Corretor`;
+        } else {
+            return NextResponse.json(
+                { error: 'Tipo de consulta inválido. Use: investidores ou corretores' },
+                { status: 400 }
+            );
+        }
+
+        const [data] = await pool.execute(query, [limit, offset]);
+        const [countResult] = await pool.execute(countQuery);
+        const total = countResult[0].total;
+
+        return NextResponse.json({
+            success: true,
+            data,
+            pagination: {
+                total,
+                limit,
+                offset,
+                hasMore: (offset + limit) < total
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao buscar dados:', error);
+        return NextResponse.json(
+            { error: 'Erro ao buscar dados: ' + error.message },
             { status: 500 }
         );
     }

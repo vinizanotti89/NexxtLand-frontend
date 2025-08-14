@@ -60,7 +60,7 @@ export default function BrokerForm() {
     }
 
     return {
-      formType: 'broker', // Adicionar identificador para consistência
+      formType: 'broker',
       TipoAtuacao: tipoAtuacao,
       Nome: formData.nome.trim(),
       NomeImobiliaria: formData.nomeImobiliaria.trim() || null,
@@ -70,7 +70,9 @@ export default function BrokerForm() {
       JaVendeuInternacional: jaVendeuInternacional,
       IdFaixaClientes50k: idFaixaClientes50k,
       QuerTreinamento: querTreinamento,
-      IdCNPJAtivo: idCNPJAtivo
+      IdCNPJAtivo: idCNPJAtivo,
+      CriadoEm: new Date().toISOString(),
+      AtualizadoEm: new Date().toISOString()
     };
   };
 

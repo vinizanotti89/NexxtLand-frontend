@@ -8,13 +8,13 @@ export default function InvestorForm() {
     nome: "",
     email: "",
     telefone: "",
+    cidade: "",
+    uf: "",
     investeImoveis: "",
+    faixaInvestimento: "",
     objetivo: "",
     investiuExterior: "",
-    faixaInvestimento: "",
-    estado: "",
-    cidade: "",
-    origem: "",
+    comoConheceu: "",
   });
 
   const [objetivos, setObjetivos] = useState<string[]>([]);
@@ -34,7 +34,7 @@ export default function InvestorForm() {
     );
   };
 
-  // Mapeamento para faixas de investimento
+  // Mapeamento para faixas de investimento (conforme banco)
   const mapFaixaInvestimento = (faixa: string): number => {
     const mapeamento = {
       "Até US$ 25 mil": 1,
@@ -55,9 +55,20 @@ export default function InvestorForm() {
       "Emigrar futuramente": 4
     };
     
-    // Retorna o ID do primeiro objetivo selecionado
     const primeiroObjetivo = objetivos[0];
     return mapeamento[primeiroObjetivo as keyof typeof mapeamento] || 1;
+  };
+
+  // Mapeamento para preferência de imóvel
+  const mapPreferenciaImovel = (preferencia: string): number => {
+    const mapeamento = {
+      "Aluguel de temporada": 1,
+      "Longo prazo": 2,
+      "Revenda rápida": 3,
+      "Construção": 4,
+      "Ainda não sei": 5
+    };
+    return mapeamento[preferencia as keyof typeof mapeamento] || 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,16 +103,22 @@ export default function InvestorForm() {
     setIsSubmitting(true);
 
     try {
-      // Preparar dados seguindo o padrão do MySQL
+      // Preparar dados seguindo exatamente a estrutura do MySQL
       const dadosEnvio = {
-        formType: 'investor', // Identificador para o backend
+        formType: 'investor',
         Nome: form.nome.trim(),
         Email: form.email.trim(),
+        Cidade: form.cidade.trim() || null,
+        UF: form.uf.trim().toUpperCase() || null,
         WhatsApp: form.telefone.replace(/\D/g, ''), // Remove caracteres não numéricos
         JaInvestiu: form.investeImoveis === "Sim" ? 1 : 0,
         IdFaixaInvestimento: mapFaixaInvestimento(form.faixaInvestimento),
         IdObjetivoInvestidor: mapObjetivo(objetivos),
-        QuerFalarEspecialista: form.investiuExterior === "Sim, quero agendar uma conversa" ? 1 : 0
+        IdPreferenciaImovel: mapPreferenciaImovel(form.objetivo),
+        QuerFalarEspecialista: form.investiuExterior === "Sim, quero agendar uma conversa" ? 1 : 0,
+        ComoConheceu: form.comoConheceu.trim() || null,
+        CriadoEm: new Date().toISOString(),
+        AtualizadoEm: new Date().toISOString()
       };
 
       console.log('Dados sendo enviados (Investidor):', dadosEnvio);
@@ -125,13 +142,13 @@ export default function InvestorForm() {
           nome: "",
           email: "",
           telefone: "",
+          cidade: "",
+          uf: "",
           investeImoveis: "",
+          faixaInvestimento: "",
           objetivo: "",
           investiuExterior: "",
-          faixaInvestimento: "",
-          estado: "",
-          cidade: "",
-          origem: "",
+          comoConheceu: "",
         });
         setObjetivos([]);
       } else {
@@ -214,6 +231,31 @@ export default function InvestorForm() {
           className="mt-1 w-full border border-gray-300 rounded px-3 py-2"
           required
         />
+      </div>
+
+      {/* Estado + Cidade */}
+      <div className="flex gap-4">
+        <div className="w-1/4">
+          <label className="block font-medium">UF</label>
+          <input
+            name="uf"
+            type="text"
+            maxLength={2}
+            value={form.uf}
+            onChange={handleChange}
+            className="mt-1 w-full border border-gray-300 rounded px-3 py-2 uppercase"
+          />
+        </div>
+        <div className="flex-1">
+          <label className="block font-medium">Cidade</label>
+          <input
+            name="cidade"
+            type="text"
+            value={form.cidade}
+            onChange={handleChange}
+            className="mt-1 w-full border border-gray-300 rounded px-3 py-2"
+          />
+        </div>
       </div>
 
       {/* Já investe em imóveis nos EUA? */}
@@ -329,38 +371,13 @@ export default function InvestorForm() {
         </div>
       </div>
 
-      {/* Estado + Cidade */}
-      <div className="flex gap-4">
-        <div className="w-1/4">
-          <label className="block font-medium">UF</label>
-          <input
-            name="estado"
-            type="text"
-            maxLength={2}
-            value={form.estado}
-            onChange={handleChange}
-            className="mt-1 w-full border border-gray-300 rounded px-3 py-2 uppercase"
-          />
-        </div>
-        <div className="flex-1">
-          <label className="block font-medium">Cidade</label>
-          <input
-            name="cidade"
-            type="text"
-            value={form.cidade}
-            onChange={handleChange}
-            className="mt-1 w-full border border-gray-300 rounded px-3 py-2"
-          />
-        </div>
-      </div>
-
-      {/* Origem */}
+      {/* Como conheceu */}
       <div>
         <label className="block font-medium">Como conheceu este projeto?</label>
         <textarea
-          name="origem"
+          name="comoConheceu"
           rows={2}
-          value={form.origem}
+          value={form.comoConheceu}
           onChange={handleChange}
           className="mt-1 w-full border border-gray-300 rounded px-3 py-2 resize-none"
         />

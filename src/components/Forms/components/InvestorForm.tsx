@@ -44,7 +44,7 @@ export default function InvestorForm() {
     return mapeamento[faixa as keyof typeof mapeamento] || 0;
   };
 
-  // Mapeamento para objetivos (assumindo que será o primeiro selecionado)
+  // Mapeamento para objetivos (pega o primeiro selecionado)
   const mapObjetivo = (objetivos: string[]): number => {
     if (objetivos.length === 0) return 0;
     
@@ -63,16 +63,36 @@ export default function InvestorForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validação básica
-    if (!form.nome || !form.email || !form.telefone || objetivos.length === 0) {
-      alert("Por favor, preencha todos os campos obrigatórios.");
+    // Validação básica aprimorada
+    if (!form.nome.trim()) {
+      alert("Por favor, preencha seu nome completo.");
+      return;
+    }
+    
+    if (!form.email.trim()) {
+      alert("Por favor, preencha seu e-mail.");
+      return;
+    }
+    
+    if (!form.telefone.trim()) {
+      alert("Por favor, preencha seu WhatsApp.");
+      return;
+    }
+    
+    if (objetivos.length === 0) {
+      alert("Por favor, selecione pelo menos um objetivo como investidor.");
+      return;
+    }
+
+    if (!form.faixaInvestimento) {
+      alert("Por favor, selecione sua faixa de investimento.");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      // Preparar dados seguindo o padrão do BrokerForm
+      // Preparar dados seguindo o padrão do MySQL
       const dadosEnvio = {
         formType: 'investor', // Identificador para o backend
         Nome: form.nome.trim(),
@@ -84,9 +104,9 @@ export default function InvestorForm() {
         QuerFalarEspecialista: form.investiuExterior === "Sim, quero agendar uma conversa" ? 1 : 0
       };
 
-      console.log('Dados sendo enviados:', dadosEnvio);
+      console.log('Dados sendo enviados (Investidor):', dadosEnvio);
+      console.log('Objetivos selecionados:', objetivos);
 
-      // CORREÇÃO: Alterar para a rota correta
       const response = await fetch('/api/DataBase', {
         method: 'POST',
         headers: {
@@ -96,7 +116,10 @@ export default function InvestorForm() {
       });
 
       if (response.ok) {
+        const result = await response.json();
         alert('Cadastro realizado com sucesso! Você receberá as oportunidades em seu email.');
+        console.log('Resposta do servidor:', result);
+        
         // Reset do form
         setForm({
           nome: "",
@@ -114,9 +137,10 @@ export default function InvestorForm() {
       } else {
         const errorData = await response.json();
         alert(`Erro ao cadastrar: ${errorData.error || 'Erro desconhecido'}`);
+        console.error('Erro do servidor:', errorData);
       }
     } catch (error) {
-      console.error('Erro:', error);
+      console.error('Erro na requisição:', error);
       alert('Erro de conexão com o servidor');
     } finally {
       setIsSubmitting(false);
@@ -184,7 +208,7 @@ export default function InvestorForm() {
         <input
           name="telefone"
           type="tel"
-          placeholder="(  ) _____-____"
+          placeholder="(11) 99999-9999"
           value={form.telefone}
           onChange={handleChange}
           className="mt-1 w-full border border-gray-300 rounded px-3 py-2"
@@ -214,7 +238,7 @@ export default function InvestorForm() {
       {/* Quanto tem disponível */}
       <div>
         <p className="font-medium mb-2">
-          5. Quanto você tem disponível para investir nos próximos 3 meses?
+          5. Quanto você tem disponível para investir nos próximos 3 meses? <span className="text-red-500">*</span>
         </p>
         <div className="flex flex-col gap-2">
           {["Até US$ 25 mil", "De US$ 25 mil a US$ 100 mil", "Acima de US$ 100 mil"].map((option) => (
@@ -236,6 +260,8 @@ export default function InvestorForm() {
       <div>
         <p className="font-medium mb-2">
           6. Qual o seu objetivo como investidor? <span className="text-red-500">*</span>
+          <br />
+          <span className="text-sm font-normal text-gray-600">(Você pode marcar mais de uma opção)</span>
         </p>
         <div className="flex flex-col gap-2">
           {[
@@ -255,6 +281,11 @@ export default function InvestorForm() {
             </label>
           ))}
         </div>
+        {objetivos.length > 0 && (
+          <p className="text-sm text-blue-600 mt-2">
+            Objetivos selecionados: {objetivos.join(", ")}
+          </p>
+        )}
       </div>
 
       {/* Preferência de imóvel */}

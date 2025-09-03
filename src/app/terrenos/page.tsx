@@ -1,13 +1,5 @@
-import SectionTerrenos from "@/components/Sections/SectionTerrenos";
-import { Metadata } from "next";
-export const fetchCache = "force-no-store";
+import SectionTerrenos from '@/components/Terrenos/SectionTerrenos';
 
-export const metadata: Metadata = {
-  title: "NexxLand | Terrenos",
-  description:
-    "Terrenos à venda na NexxLand. Encontre o terreno ideal para você!",
-};
-
-export default async function ProductsPage() {
+export default function TerrenosPage() {
   return <SectionTerrenos />;
 }

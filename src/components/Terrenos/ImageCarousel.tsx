@@ -152,10 +152,6 @@ export default function ImageCarousel({ images, title }: ImageCarouselProps) {
             </div>
           )}
 
-          {/* Indicador de swipe para mobile */}
-          <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-xs sm:hidden">
-            👆 Arraste
-          </div>
         </div>
 
         {/* Miniaturas */}
@@ -233,11 +229,6 @@ export default function ImageCarousel({ images, title }: ImageCarouselProps) {
                 </div>
               </>
             )}
-
-            {/* Indicador de swipe para fullscreen mobile */}
-            <div className="absolute top-4 left-4 bg-black/50 text-white px-2 py-1 rounded text-xs sm:hidden">
-              👆 Arraste para navegar
-            </div>
           </div>
         </div>
       )}
